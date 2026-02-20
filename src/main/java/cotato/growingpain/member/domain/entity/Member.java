@@ -48,9 +48,6 @@ public class Member extends BaseTimeEntity {
     @Column(name = "member_name")   //닉네임
     private String name;
 
-    @Column(name = "member_password")
-    private String password;
-
     @Email
     @Column(name = "member_email")
     private String email;
@@ -147,16 +144,16 @@ public class Member extends BaseTimeEntity {
     private List<JobPost> jobPosts = new ArrayList<>();
 
     @Builder
-    public Member(String email, String password, String oauth2Id, AuthProvider authProvider, MemberRole memberRole) {
+    public Member(String email, String oauth2Id, AuthProvider authProvider, MemberRole memberRole) {
         this.email = email;
-        this.password = password;
         this.oauth2Id = oauth2Id;
         this.authProvider = authProvider;
         this.memberRole = memberRole;
     }
 
-    public void updatePassword(String newPassword) {
-        this.password = newPassword;
+    public void updateOAuthInfo(String oauth2Id, AuthProvider authProvider) {
+        this.oauth2Id = oauth2Id;
+        this.authProvider = authProvider;
     }
 
     public void updateMemberInfo(String name, String field, String belong, MemberJob job) {
