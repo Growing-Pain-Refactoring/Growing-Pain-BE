@@ -25,18 +25,20 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.Email;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.DynamicInsert;
 
-@Entity
 @Getter
-@DynamicInsert
+@Entity
+@AllArgsConstructor
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Member extends BaseTimeEntity {
 
@@ -69,7 +71,6 @@ public class Member extends BaseTimeEntity {
 
     @Column(name = "member_role")
     @Enumerated(EnumType.STRING)
-    @ColumnDefault(value = "'GENERAL'")
     private MemberRole memberRole;
 
     @Column(name = "profile_image_url") // 프로필 사진 URL
@@ -143,31 +144,30 @@ public class Member extends BaseTimeEntity {
     @JsonIgnore
     private List<JobPost> jobPosts = new ArrayList<>();
 
-    @Builder
-    public Member(String email, String oauth2Id, AuthProvider authProvider, MemberRole memberRole) {
-        this.email = email;
-        this.oauth2Id = oauth2Id;
-        this.authProvider = authProvider;
-        this.memberRole = memberRole;
-    }
+    @Column(nullable = false)
+    private boolean deleted = false;
 
-    public void updateOAuthInfo(String oauth2Id, AuthProvider authProvider) {
-        this.oauth2Id = oauth2Id;
-        this.authProvider = authProvider;
-    }
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime modifiedAt;
 
     public void updateMemberInfo(String name, String field, String belong, MemberJob job) {
         this.name = name;
         this.field = field;
         this.belong = belong;
         this.job = job;
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public void updateRole(MemberRole memberRole) {
         this.memberRole = memberRole;
+        this.modifiedAt = LocalDateTime.now();
     }
 
-    public void updateDefaultInfo(String field, String belong, MemberJob job, String educationBackground, String skill, String activityHistory, String award,
+    public void updateDefaultInfo(String field, String belong, MemberJob job, String educationBackground, String skill,
+                                  String activityHistory, String award,
                                   String languageScore) {
         this.field = field;
         this.belong = belong;
@@ -177,18 +177,22 @@ public class Member extends BaseTimeEntity {
         this.activityHistory = activityHistory;
         this.award = award;
         this.languageScore = languageScore;
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public void updateAdditionalInfo(String career, String aboutMe) {
         this.career = career;
         this.aboutMe = aboutMe;
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public void updateProfilePublic(MemberProfileShowing memberProfileShowing) {
         this.memberProfileShowing = memberProfileShowing;
+        this.modifiedAt = LocalDateTime.now();
     }
 
     public void updateProfileImage(String imageUrl) {
         this.profileImageUrl = imageUrl;
+        this.modifiedAt = LocalDateTime.now();
     }
 }

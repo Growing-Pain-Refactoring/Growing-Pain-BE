@@ -11,7 +11,6 @@ public enum ErrorCode {
     //회원가입
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "존재하는 이메일입니다."),
     NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "존재하는 닉네임입니다."),
-    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "유효하지 않은 비밀번호 형식입니다."),
     WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 틀렸습니다."),
     ACCESS_DENIED_USER(HttpStatus.FORBIDDEN,"권한이 없는 유저입니다."),
 
@@ -20,8 +19,11 @@ public enum ErrorCode {
     JWT_NOT_EXISTS(HttpStatus.BAD_REQUEST, "Jwt 토큰이 존재하지 않습니다."),
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND,"해당 유저를 찾을 수 없습니다."),
     USER_ALREADY_EXISTS(HttpStatus.BAD_REQUEST,"이미 존재하는 유저입니다."),
-    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "토큰이 만료되었습니다."),
-    REFRESH_TOKEN_NOT_EXIST(HttpStatus.UNAUTHORIZED, "해당 refresh 토큰이 DB에 존재하지 않습니다."),
+    EXPIRED_TOKEN(HttpStatus.BAD_REQUEST, "토큰이 만료되었습니다."),
+    INVALID_JWT(HttpStatus.UNAUTHORIZED, "해당 jwt가 DB에 존재하지 않습니다."),
+    INVALID_ACCESS_TOKEN(HttpStatus.UNAUTHORIZED, "."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "."),
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 refresh 토큰이 DB에 존재하지 않습니다."),
     REISSUE_FAIL(HttpStatus.UNAUTHORIZED, "액세스 토큰 재발급 요청 실패"),
 
     //커뮤니티

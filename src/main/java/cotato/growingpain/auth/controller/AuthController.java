@@ -6,6 +6,10 @@ import cotato.growingpain.auth.dto.response.DuplicateCheckResponse;
 import cotato.growingpain.auth.service.AuthService;
 import cotato.growingpain.auth.service.ValidateService;
 import cotato.growingpain.common.Response;
+import cotato.growingpain.common.exception.AppException;
+import cotato.growingpain.common.exception.ErrorCode;
+import cotato.growingpain.security.jwt.dto.LoginResultDto;
+import cotato.growingpain.security.jwt.dto.request.KakaoLoginRequest;
 import cotato.growingpain.security.jwt.dto.request.ReissueRequest;
 import cotato.growingpain.security.jwt.dto.response.ReissueResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,8 +21,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,14 +41,24 @@ public class AuthController {
     private final AuthService authService;
     private final ValidateService validateService;
 
-    @Operation(summary = "추가 정보 입력", description = "최초 로그인 시 추가 정보를 입력하는 메소드")
+    @Operation(summary = "카카오 로그인", description = "카카오에서 받은 액세스 토큰을 통해 회원가입 또는 로그인하는 API")
     @ApiResponse(content = @Content(schema = @Schema(implementation = Response.class)))
+    @PostMapping("/kakao/login")
+    public Response<LoginResultDto> loginKakao(@RequestBody KakaoLoginRequest request) {
+        LoginResultDto response = authService.loginKakao(request);
+        log.trace("[Auth Controller] Complete Kakao Login");
+        return Response.createSuccess("카카오 소셜 로그인 완료", response);
+    }
+
+    @Operation(summary = "추가 정보 입력", description = "최초 로그인 시 추가 정보를 입력하는 메소드")
+    @ApiResponse(content = @Content(schema = @Schema(implementation = ReissueResponse.class)))
     @PostMapping("/complete-signup")
     @ResponseStatus(HttpStatus.OK)
-    public Response<?> completeSignup(@RequestBody @Valid CompleteSignupRequest request,
-                                      @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        String accessToken = authService.resolveAccessToken(authorizationHeader);
-        return Response.createSuccess("추가 정보 입력 완료", authService.completeSignup(request, accessToken));
+    public Response<ReissueResponse> completeSignup(@RequestBody @Valid CompleteSignupRequest request,
+                                                    @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        String accessToken = resolveAccessToken(authorizationHeader);
+        ReissueResponse response = authService.completeSignup(request, accessToken);
+        return Response.createSuccess("추가 정보 입력 완료", response);
     }
 
     @Operation(summary = "리이슈", description = "리이슈 및 토큰 재발급을 위한 메소드")
@@ -52,7 +66,7 @@ public class AuthController {
     @PostMapping("/reissue")
     @ResponseStatus(HttpStatus.OK)
     public Response<ReissueResponse> tokenRefresh(@RequestBody ReissueRequest request) {
-        ReissueResponse reissueResponse = authService.tokenReissue(request);
+        ReissueResponse reissueResponse = authService.reissueToken(request.refreshToken());
         return Response.createSuccess("리이슈 완료", reissueResponse);
     }
 
@@ -78,5 +92,16 @@ public class AuthController {
         } else {
             return Response.createSuccess("사용 가능한 닉네임입니다.", response);
         }
+    }
+
+    private String resolveAccessToken(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            throw new AppException(ErrorCode.JWT_NOT_EXISTS);
+        }
+        String bearer = "Bearer ";
+        if (!authorizationHeader.startsWith(bearer) || authorizationHeader.length() <= bearer.length()) {
+            throw new AppException(ErrorCode.INVALID_ACCESS_TOKEN);
+        }
+        return authorizationHeader.substring(bearer.length());
     }
 }

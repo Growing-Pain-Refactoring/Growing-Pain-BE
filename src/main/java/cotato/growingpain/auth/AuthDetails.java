@@ -1,40 +1,33 @@
 package cotato.growingpain.auth;
 
-import cotato.growingpain.member.domain.entity.Member;
 import java.util.Collection;
 import java.util.Collections;
-import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-@Data
+@AllArgsConstructor
+@Getter
 public class AuthDetails implements UserDetails {
 
-    private final Member member;
-
-    public AuthDetails(Member member) {
-        this.member = member;
-    }
-
-    public Member getMember() {
-        return member;
-    }
+    private String userId;
+    private String role;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        String authority = member.getMemberRole().name();
-        return Collections.singletonList(new SimpleGrantedAuthority(authority));
+        return Collections.singleton(new SimpleGrantedAuthority("ROLE_" + role));
     }
 
     @Override
     public String getPassword() {
-        return member.getPassword();
+        return null;
     }
 
     @Override
     public String getUsername() {
-        return member.getEmail();
+        return userId;
     }
 
     @Override

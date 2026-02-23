@@ -1,20 +1,24 @@
 package cotato.growingpain.auth.service;
 
 import cotato.growingpain.auth.domain.BlackList;
+import cotato.growingpain.auth.domain.RefreshToken;
 import cotato.growingpain.auth.dto.request.CompleteSignupRequest;
 import cotato.growingpain.auth.dto.request.LogoutRequest;
 import cotato.growingpain.auth.repository.BlackListRepository;
 import cotato.growingpain.common.exception.AppException;
 import cotato.growingpain.common.exception.ErrorCode;
+import cotato.growingpain.converter.AuthConverter;
 import cotato.growingpain.member.domain.MemberRole;
 import cotato.growingpain.member.domain.entity.Member;
 import cotato.growingpain.member.repository.MemberRepository;
 import cotato.growingpain.security.RefreshTokenRepository;
-import cotato.growingpain.security.jwt.JwtTokenProvider;
-import cotato.growingpain.security.jwt.RefreshTokenEntity;
-import cotato.growingpain.security.jwt.Token;
-import cotato.growingpain.security.jwt.dto.request.ReissueRequest;
+import cotato.growingpain.security.jwt.JwtProvider;
+import cotato.growingpain.security.jwt.dto.AccessTokenInfo;
+import cotato.growingpain.security.jwt.dto.LoginResultDto;
+import cotato.growingpain.security.jwt.dto.request.KakaoLoginRequest;
+import cotato.growingpain.security.jwt.dto.response.OAuthUserInfoResponse;
 import cotato.growingpain.security.jwt.dto.response.ReissueResponse;
+import cotato.growingpain.security.jwt.properties.JwtProperties;
 import cotato.growingpain.security.oauth.AuthProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,125 +32,141 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final MemberRepository memberRepository;
-    private final ValidateService validateService;
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtProvider jwtProvider;
+    private final JwtProperties jwtProperties;
+    private final RequestOAuthUserInfoService requestOAuthUserInfoService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final BlackListRepository blackListRepository;
+    private final ValidateService validateService;
 
     @Transactional
-    public Member findOrRegisterMember(String email, String oauth2Id, AuthProvider authProvider) {
-        return memberRepository.findByEmail(email)
-                .map(member -> {
-                    member.updateOAuthInfo(oauth2Id, authProvider);
-                    return memberRepository.save(member);
-                })
-                .orElseGet(() -> {
-                    log.info("[OAuth 신규 회원 등록] email: {}, provider: {}", email, authProvider);
-                    Member newMember = Member.builder()
-                            .email(email)
-                            .oauth2Id(oauth2Id)
-                            .authProvider(authProvider)
-                            .memberRole(MemberRole.PENDING)
-                            .build();
-                    return memberRepository.save(newMember);
-                });
+    public LoginResultDto loginKakao(KakaoLoginRequest request) {
+        // 1. accessToken으로 사용자 정보 요청
+        OAuthUserInfoResponse userInfo = requestOAuthUserInfoService.request(AuthProvider.KAKAO, request.accessToken());
+
+        String email = userInfo.getEmail();
+        String nickname = userInfo.getName();
+        AuthProvider authProvider = userInfo.getOAuthProvider();
+
+        // 2. 이메일로 기존 사용자 조회 및 신규 등록
+        Member member = memberRepository.findByEmail(email)
+                .orElseGet(() -> memberRepository.save(AuthConverter.toUserEntity(email, nickname, authProvider)));
+
+        if (member.getMemberRole() == null) {
+            member.updateRole(MemberRole.PENDING);
+            memberRepository.save(member);
+        }
+
+        // 3. JWT 발급
+        String accessToken = jwtProvider.generateAccessToken(member.getId(), member.getMemberRole().name());
+        String refreshToken = jwtProvider.generateRefreshToken(member.getId());
+
+        // 4. refreshToken Redis 저장
+        RefreshToken tokenEntity = AuthConverter.toRefreshTokenEntity(
+                member.getId(),
+                refreshToken,
+                jwtProperties.getRefreshTokenTime()
+        );
+        refreshTokenRepository.save(tokenEntity);
+
+        // 5. converter 사용해서 dto로 변환
+        return AuthConverter.toLoginResultDto(member, accessToken, refreshToken);
     }
 
     @Transactional
-    public Token completeSignup(CompleteSignupRequest request, String accessToken) {
+    public ReissueResponse completeSignup(CompleteSignupRequest request, String accessToken) {
 
-        String email = jwtTokenProvider.getEmail(accessToken);
+        AccessTokenInfo accessTokenInfo = jwtProvider.parseAccessToken(accessToken);
+        Long memberId = accessTokenInfo.userId();
 
-        Member member = memberRepository.findByEmail(email)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
 
         log.info("추가 정보 입력 받는 이메일: {}", email);
+        log.info("추가 정보 입력 받는 회원 ID: {}", memberId);
 
-        if (member.getMemberRole() == MemberRole.PENDING) {
-
+        if (member.getName() == null || !member.getName().equals(request.name())) {
             validateService.checkDuplicateNickName(request.name());
-
-            member.updateMemberInfo(request.name(), request.field(), request.belong(), request.job());
-            member.updateRole(MemberRole.MEMBER);
-
-            memberRepository.save(member);
-
-            Token token = jwtTokenProvider.createToken(member.getId(), member.getEmail(), MemberRole.MEMBER.getDescription());
-
-            saveOrUpdateRefreshToken(member.getEmail(), token.getRefreshToken());
-
-            return token;
         }
 
-        log.info("memberRole = {}", member.getMemberRole());
-        return null;
+        member.updateMemberInfo(request.name(), request.field(), request.belong(), request.job());
+        member.updateRole(MemberRole.MEMBER);
+        memberRepository.save(member);
+
+        String newAccessToken = jwtProvider.generateAccessToken(member.getId(), MemberRole.MEMBER.name());
+        String newRefreshToken = jwtProvider.generateRefreshToken(member.getId());
+
+        RefreshToken tokenEntity = AuthConverter.toRefreshTokenEntity(
+                member.getId(),
+                newRefreshToken,
+                jwtProperties.getRefreshTokenTime()
+        );
+        refreshTokenRepository.save(tokenEntity);
+
+        return new ReissueResponse(newAccessToken, newRefreshToken);
     }
 
-    public String resolveAccessToken(String authorizationHeader) {
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            return authorizationHeader.replace("Bearer ", "");
+
+    public ReissueResponse reissueToken(String refreshToken) {
+        // 1. refreshToken 유효성 검증 및 userId 추출
+        Long userId = jwtProvider.parseRefreshToken(refreshToken);
+
+        // 2. Redis 저장값 확인 (id 기준)
+        RefreshToken storedRefreshToken = refreshTokenRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
+
+        // 3. 값 비교
+        if (!storedRefreshToken.getRefreshToken().equals(refreshToken)) {
+            throw new AppException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
-        return null;
+
+        // 4. 기존 refreshToken 삭제
+        refreshTokenRepository.deleteById(userId);
+
+        // 5. 새 토큰 발급
+        Member member = memberRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
+        MemberRole memberRole = member.getMemberRole() != null ? member.getMemberRole() : MemberRole.PENDING;
+
+        String newAccessToken = jwtProvider.generateAccessToken(userId, memberRole.name());
+        String newRefreshToken = jwtProvider.generateRefreshToken(userId);
+
+        // 6. 새 refreshToken Redis 저장
+        RefreshToken tokenEntity = AuthConverter.toRefreshTokenEntity(
+                userId,
+                newRefreshToken,
+                jwtProperties.getRefreshTokenTime()
+        );
+        refreshTokenRepository.save(tokenEntity);
+
+        // 7. 결과 반환
+        return new ReissueResponse(newAccessToken, newRefreshToken);
     }
 
     @Transactional
-    public ReissueResponse tokenReissue(ReissueRequest request) {
+    public void logout(LogoutRequest logoutRequest) {
+        // 1. accessToken → 블랙리스트 등록
+        setBlackList(logoutRequest.accessToken());
 
-        String email = jwtTokenProvider.getEmail(request.refreshToken());
-        String role = jwtTokenProvider.getRole(request.refreshToken());
-        Long memberId = jwtTokenProvider.getMemberId(request.refreshToken());
-
-        log.info("재발급 요청된 이메일: {}", email);
-        log.info("재발급 요청된 role: {}", role);
-
-        RefreshTokenEntity findToken = refreshTokenRepository.findById(email)
-                .orElseThrow(() -> new AppException(ErrorCode.EMAIL_NOT_FOUND));
-
-        if (jwtTokenProvider.isExpired(request.refreshToken())) {
-            throw new AppException(ErrorCode.TOKEN_EXPIRED);
-        }
-
-        if (!findToken.getRefreshToken().equals(request.refreshToken())) {
-            log.warn("[쿠키로 들어온 토큰과 DB의 토큰이 일치하지 않음.]");
-            throw new AppException(ErrorCode.REFRESH_TOKEN_NOT_EXIST);
-        }
-
-        Token token = jwtTokenProvider.createToken(memberId, email, role);
-
-        log.info("재발급 된 액세스 토큰: {}", token.getAccessToken());
-        log.info("재발급 된 refresh 토큰: {}", token.getRefreshToken());
-
-        saveOrUpdateRefreshToken(email, token.getRefreshToken());
-        return ReissueResponse.from(token.getAccessToken(), token.getRefreshToken());
+        // 2. refreshToken → Redis에서 삭제
+        deleteRefreshToken(logoutRequest.refreshToken());
     }
 
-    @Transactional
-    public void saveOrUpdateRefreshToken(String email, String refreshToken) {
-        RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findById(email)
-                .orElse(RefreshTokenEntity.builder().email(email).build());
 
-        refreshTokenEntity.updateRefreshToken(refreshToken);
-        refreshTokenRepository.save(refreshTokenEntity);
+    public boolean isBlocked(String accessToken) {
+        return blackListRepository.findById(accessToken).isPresent();
     }
 
-    @Transactional
-    public void logout(LogoutRequest request) {
-        String email = jwtTokenProvider.getEmail(request.refreshToken());
-
-        RefreshTokenEntity existRefreshToken = refreshTokenRepository.findById(email)
-                .orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_NOT_EXIST));
-
-        setBlackList(request.refreshToken());
-        log.info("[로그아웃 된 리프레시 토큰 블랙리스트 처리]");
-        refreshTokenRepository.delete(existRefreshToken);
-        log.info("삭제 요청된 refreshToken: {}", request.refreshToken());
+    private void setBlackList(String accessToken) {
+        long ttl = jwtProvider.getExpiration(accessToken);
+        BlackList blacklist = AuthConverter.toBlackList(accessToken, ttl);
+        blackListRepository.save(blacklist);
     }
 
-    private void setBlackList(String token) {
-        BlackList blackList = BlackList.builder()
-                .id(token)
-                .ttl(jwtTokenProvider.getExpiration(token))
-                .build();
-        blackListRepository.save(blackList);
+    private void deleteRefreshToken(String refreshToken) {
+        RefreshToken refreshTokenEntity = refreshTokenRepository.findByRefreshToken(refreshToken)
+                .orElseThrow(() -> new AppException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
+
+        refreshTokenRepository.delete(refreshTokenEntity);
     }
 }
