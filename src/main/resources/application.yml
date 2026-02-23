@@ -19,3 +19,8 @@ logging:
 
     com:
       fasterxml.jackson: DEBUG
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY}
+  access-token-time: 1800000 #30분
+  refresh-token-time: 604800000 #7일간
