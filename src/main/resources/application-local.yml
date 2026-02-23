@@ -31,18 +31,26 @@ spring:
       host: localhost
       port: 6379
 
-jwt:
-  secretKey: ${JWT_SECRET_KEY}
-  access:
-    expiration: 1800000 #30분
-
-  refresh:
-    expiration: 604800000 #7일
-
-#logging:
-#  discord:
-#    webhook-uri: ${DISCORD_WEBHOOK_URI}
-#  config: classpath:logback-test.xml
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-name: Kakao
+            client-authentication-method: client_secret_post
+            redirect-uri: http://localhost:8080/login/oauth2/code/kakao
+            authorization-grant-type: authorization_code
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            scope: account_email,profile_nickname
+        provider:
+          kakao:
+            user-name-attribute: id
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+#  oauth:
+#    authorizedRedirectUri: http://localhost:3000/login/redirected
 
 cloud:
   aws:
