@@ -1,7 +1,7 @@
 package cotato.growingpain.infrastructure.client;
 
-import cotato.growingpain.security.jwt.dto.response.OAuthUserInfoResponse;
-import cotato.growingpain.security.oauth.AuthProvider;
+import cotato.growingpain.infrastructure.security.jwt.dto.response.OAuthUserInfoResponse;
+import cotato.growingpain.infrastructure.security.oauth.AuthProvider;
 
 public interface OAuthApiClient {
     AuthProvider oAuthProvider();

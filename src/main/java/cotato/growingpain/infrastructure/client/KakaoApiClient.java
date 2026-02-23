@@ -1,8 +1,8 @@
 package cotato.growingpain.infrastructure.client;
 
-import cotato.growingpain.security.jwt.dto.response.KakaoUserInfoResponse;
-import cotato.growingpain.security.jwt.dto.response.OAuthUserInfoResponse;
-import cotato.growingpain.security.oauth.AuthProvider;
+import cotato.growingpain.infrastructure.security.jwt.dto.response.KakaoUserInfoResponse;
+import cotato.growingpain.infrastructure.security.jwt.dto.response.OAuthUserInfoResponse;
+import cotato.growingpain.infrastructure.security.oauth.AuthProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

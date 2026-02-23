@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 @Getter
 public enum ErrorCode {
+    //Todo: message 없애고 status 없애고? 코드로 바꾸기?
 
     //회원가입
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "존재하는 이메일입니다."),

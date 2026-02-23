@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: dev # dev: 개발 서버, local: 로컬 개발
+    active: local # dev: 개발 서버, local: 로컬 개발
 
   output:
     ansi:
