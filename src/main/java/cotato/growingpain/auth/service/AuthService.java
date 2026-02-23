@@ -82,7 +82,6 @@ public class AuthService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
 
-        log.info("추가 정보 입력 받는 이메일: {}", email);
         log.info("추가 정보 입력 받는 회원 ID: {}", memberId);
 
         if (member.getName() == null || !member.getName().equals(request.name())) {
