@@ -2,8 +2,8 @@ package cotato.growingpain.security.jwt.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record ReissueRequest(
+public record KakaoLoginRequest(
         @NotBlank
-        String refreshToken
+        String accessToken
 ) {
 }
