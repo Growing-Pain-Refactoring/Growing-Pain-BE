@@ -1,11 +1,11 @@
 package cotato.growingpain.security.oauth;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
+@Getter
 public enum AuthProvider {
-    KAKAO("카카오 소셜 로그인"),
-    GOOGLE("구글 소셜 로그인");
-
-    private final String description;
+    KAKAO,
+    GOOGLE
 }
