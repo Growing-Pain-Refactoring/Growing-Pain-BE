@@ -21,12 +21,14 @@ public class SecurityConfig {
             "/api/auth/**",
             "/v3/api-docs/**"
     };
+
     private static final String[] REQUIRED_AUTHENTICATE = {
             "/api/post/**",
             "/api/comment/**",
             "/api/reply-comment/**",
             "/api/job-posts/**",
-            "/api/member/**"
+            "/api/member/**",
+            "/api/cover-letter/**"
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;

@@ -61,3 +61,7 @@ cloud:
     credentials:
       accessKey: ${S3_ACCESS_KEY}
       secretKey: ${S3_ACCESS_PASSWORD}
+
+ai:
+  server:
+    url: ${LOCAL_AI_SERVER_URL}
