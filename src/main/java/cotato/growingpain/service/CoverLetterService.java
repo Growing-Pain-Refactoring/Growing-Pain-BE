@@ -60,4 +60,10 @@ public class CoverLetterService {
 
         return CoverLetterResponse.from(coverLetter);
     }
+
+    public List<CoverLetterResponse> getCoverLetters(Long memberId) {
+        return coverLetterRepository.findByMemberId(memberId).stream()
+                .map(CoverLetterResponse::from)
+                .toList();
+    }
 }

@@ -5,10 +5,12 @@ import cotato.growingpain.dto.response.CoverLetterResponse;
 import cotato.growingpain.service.CoverLetterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -34,5 +36,15 @@ public class CoverLetterController {
         log.info("자소서 업로드 요청: memberId={}", memberId);
         CoverLetterResponse response = coverLetterService.uploadCoverLetter(file, memberId);
         return Response.createSuccess("자소서 업로드 완료", response);
+    }
+
+    @Operation(summary = "자소서 목록 조회", description = "멤버의 자소서 목록을 조회합니다.")
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public Response<List<CoverLetterResponse>> getCoverLetters(
+            @AuthenticationPrincipal Long memberId) {
+        log.info("자소서 목록 조회: memberId={}", memberId);
+        List<CoverLetterResponse> responses = coverLetterService.getCoverLetters(memberId);
+        return Response.createSuccess("자소서 목록 조회 완료", responses);
     }
 }
