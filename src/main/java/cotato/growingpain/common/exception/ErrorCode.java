@@ -43,6 +43,7 @@ public enum ErrorCode {
 
     //S3
     IMAGE_PROCESSING_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"이미지 처리에 실패했습니다."),
+    FILE_PROCESSING_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"파일 처리에 실패했습니다."),
 
     //자소서
     INVALID_FILE_EXTENSION(HttpStatus.BAD_REQUEST, "PDF 파일만 업로드 가능합니다."),

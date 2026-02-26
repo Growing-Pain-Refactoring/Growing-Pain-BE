@@ -41,7 +41,7 @@ public class CoverLetterService {
         try {
             s3Url = s3Uploader.uploadFileToS3(file, "cover-letters");
         } catch (IOException e) {
-            throw new AppException(ErrorCode.IMAGE_PROCESSING_FAIL);
+            throw new AppException(ErrorCode.FILE_PROCESSING_FAIL);
         }
 
         Member member = memberRepository.findById(memberId)

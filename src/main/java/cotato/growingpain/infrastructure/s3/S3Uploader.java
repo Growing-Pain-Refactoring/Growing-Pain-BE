@@ -36,6 +36,14 @@ public class S3Uploader {
         return upload(uploadFile, dirName);
     }
 
+    // PDF 등 일반 파일 S3 업로드
+    public String uploadFileToS3(MultipartFile multipartFile, String dirName) throws FileException {
+        log.info("{} 파일 업로드", multipartFile.getOriginalFilename());
+        File uploadFile = convertFile(multipartFile)
+                .orElseThrow(() -> new FileException(ErrorCode.FILE_PROCESSING_FAIL));
+        return upload(uploadFile, dirName);
+    }
+
     public String upload(File uploadFile, String filePath) {
         String fileName = filePath + "/" + UUID.randomUUID() + uploadFile.getName();
         String uploadFileUrl = putS3(uploadFile, fileName);
@@ -74,6 +82,21 @@ public class S3Uploader {
             }
         } catch (IOException e) {
             throw new ImageException(ErrorCode.IMAGE_PROCESSING_FAIL);
+        }
+        return Optional.empty();
+    }
+
+    private Optional<File> convertFile(MultipartFile file) throws FileException {
+        File convertFile = new File(System.getProperty("user.dir") + "/" + file.getOriginalFilename());
+        try {
+            if (convertFile.createNewFile()) { // 바로 위에서 지정한 경로에 File이 생성됨 (경로가 잘못되었다면 생성 불가능)
+                FileOutputStream fos = new FileOutputStream(convertFile); // FileOutputStream 데이터를 파일에 바이트 스트림으로 저장하기 위함
+                fos.write(file.getBytes());
+                fos.close();
+                return Optional.of(convertFile);
+            }
+        } catch (IOException e) {
+            throw new FileException(ErrorCode.FILE_PROCESSING_FAIL);
         }
         return Optional.empty();
     }
