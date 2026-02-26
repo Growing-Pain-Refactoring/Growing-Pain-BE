@@ -42,7 +42,12 @@ public enum ErrorCode {
     ALREADY_SAVED(HttpStatus.CONFLICT, "이미 저장되었습니다."),
 
     //S3
-    IMAGE_PROCESSING_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"이미지 처리에 실패했습니다.");
+    IMAGE_PROCESSING_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"이미지 처리에 실패했습니다."),
+    FILE_PROCESSING_FAIL(HttpStatus.INTERNAL_SERVER_ERROR,"파일 처리에 실패했습니다."),
+
+    //자소서
+    INVALID_FILE_EXTENSION(HttpStatus.BAD_REQUEST, "PDF 파일만 업로드 가능합니다."),
+    COVER_LETTER_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 자소서를 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
