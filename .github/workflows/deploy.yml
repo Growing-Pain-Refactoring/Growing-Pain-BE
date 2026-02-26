@@ -6,7 +6,7 @@ on:
 
 env:
   PROJECT_NAME: Growing-Pain
-  S3_BUCKET_NAME: growing-pain-bucket
+  S3_BUCKET_NAME: gamara-bucket
   CODE_DEPLOY_APPLICATION_NAME: growing-pain-deploy
   CODE_DEPLOY_DEPLOYMENT_GROUP_NAME: growing-pain-group
   RESOURCE_PATH: ./src/main/resources/application-dev.yml
