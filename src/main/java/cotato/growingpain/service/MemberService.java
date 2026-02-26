@@ -81,7 +81,7 @@ public class MemberService {
                 .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
 
         if (profileImage != null && !profileImage.isEmpty()) {
-            String imageUrl = s3Uploader.uploadFileToS3(profileImage, "profile-image");
+            String imageUrl = s3Uploader.uploadImageFileToS3(profileImage, "profile-image");
             member.updateProfileImage(imageUrl);
             memberRepository.save(member);
         }

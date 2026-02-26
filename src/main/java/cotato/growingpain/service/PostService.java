@@ -105,7 +105,7 @@ public class PostService {
          if (imageFiles != null && !imageFiles.isEmpty()) { // null 체크 추가
             for (MultipartFile imageFile : imageFiles) {
                 if (!imageFile.isEmpty()) {
-                    String imageUrl = s3Uploader.uploadFileToS3(imageFile, "post");
+                    String imageUrl = s3Uploader.uploadImageFileToS3(imageFile, "post");
                     PostImage postImage = new PostImage(post.getId(), imageUrl);
                     postImageRepository.save(postImage);
                 }
